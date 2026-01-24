@@ -290,6 +290,10 @@
       color: var(--primary);
       margin-left: 10px;
     }
+
+    #testBtn {
+      display: none;
+    }
   </style>
 </head>
 
@@ -306,7 +310,7 @@
     <ul id="taskList"></ul>
     <div class="stats">
       <p>Tareas completadas hoy: <span id="completedToday">0</span></p>
-      <p>Total acumulado: <span id="completedTotal">0</span></p>
+
     </div>
     <div id="statsView">
       <h2>Estadísticas de Tareas por Día</h2>
@@ -327,7 +331,7 @@
     const taskInput = document.getElementById("taskInput");
     const taskList = document.getElementById("taskList");
     const completedTodayEl = document.getElementById("completedToday");
-    const completedTotalEl = document.getElementById("completedTotal");
+
     const statsBtn = document.getElementById("statsBtn");
     const statsView = document.getElementById("statsView");
     const statsTable = document.getElementById("statsTable");
@@ -335,6 +339,7 @@
     const toggleBtn = document.getElementById("toggleBtn");
     const container = document.querySelector(".container");
     const body = document.body;
+    const testBtn = document.getElementById("testBtn");
 
     // Date filter elements
     const startDateInput = document.getElementById("startDate");
@@ -471,7 +476,7 @@
       });
 
       completedTodayEl.textContent = stats.completedToday;
-      completedTotalEl.textContent = stats.completedTotal;
+
     }
 
     taskList.addEventListener("dragover", e => {
@@ -522,8 +527,17 @@
           text: taskText, completed: false
         });
         taskInput.value = "";
+        testBtn.style.display = "none"; // Hide after adding
         saveData();
         renderTasks();
+      }
+    });
+
+    taskInput.addEventListener("input", () => {
+      if (taskInput.value.toLowerCase().trim() === "test") {
+        testBtn.style.display = "block";
+      } else {
+        testBtn.style.display = "none";
       }
     });
 
