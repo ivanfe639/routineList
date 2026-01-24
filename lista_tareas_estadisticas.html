@@ -30,6 +30,17 @@
       -webkit-font-smoothing: antialiased;
     }
 
+    /* Chart styles */
+    .chart-container {
+      width: 100%;
+      height: 250px;
+      margin: 20px 0;
+      background: var(--card-bg);
+      padding: 15px;
+      border-radius: 18px;
+      box-sizing: border-box;
+    }
+
     .container {
       background: var(--bg-color);
       /* Full black for OLED feel or app bg */
@@ -295,6 +306,8 @@
       display: none;
     }
   </style>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
 </head>
 
 <body>
@@ -324,6 +337,10 @@
       </div>
 
       <table id="statsTable"></table>
+
+      <div class="chart-container">
+        <canvas id="statsChart"></canvas>
+      </div>
     </div>
   </div>
   <script>
@@ -346,6 +363,7 @@
     const endDateInput = document.getElementById("endDate");
     const filterBtn = document.getElementById("filterBtn");
     const exportBtn = document.getElementById("exportBtn");
+    let statsChartInstance = null;
 
     // Remove legacy theme code references if need be, but for now update color toggle:
     // Update theme toggle to switch CSS variables instead of hardcoded styles
@@ -565,6 +583,68 @@
         if (start && day < start) return false;
         if (end && day > end) return false;
         return true;
+      });
+
+      // Prepare Chart Data
+      const taskLabels = tasks.map(t => t.text);
+      const completionCounts = tasks.map(task => {
+        let count = 0;
+        days.forEach(day => {
+          if (stats.history[day] && stats.history[day][task.text]) count++;
+        });
+        return count;
+      });
+
+      // Render/Update Chart
+      const ctx = document.getElementById('statsChart').getContext('2d');
+      if (statsChartInstance) statsChartInstance.destroy();
+
+      statsChartInstance = new Chart(ctx, {
+        type: 'bar',
+        plugins: [ChartDataLabels],
+        data: {
+          labels: taskLabels,
+          datasets: [{
+            label: 'Completado',
+            data: completionCounts,
+            backgroundColor: '#0a84ff',
+            borderRadius: 6,
+            barThickness: 24
+          }]
+        },
+        options: {
+          indexAxis: 'y',
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            title: {
+              display: true,
+              text: 'Total Acumulado',
+              color: '#ffffff',
+              font: { size: 16, weight: 'bold', family: 'Inter' },
+              padding: { bottom: 10 }
+            },
+            datalabels: {
+              color: '#ffffff',
+              anchor: 'center',
+              align: 'center',
+              font: { weight: 'bold', size: 12 },
+              formatter: (val) => val > 0 ? val : ''
+            }
+          },
+          scales: {
+            x: {
+              beginAtZero: true,
+              grid: { display: false },
+              ticks: { color: '#8e8e93', stepSize: 1 }
+            },
+            y: {
+              grid: { color: '#38383a' },
+              ticks: { color: '#ffffff' }
+            }
+          }
+        }
       });
 
       const headerRow = document.createElement("tr");
