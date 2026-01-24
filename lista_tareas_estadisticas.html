@@ -149,11 +149,20 @@
       padding: 16px;
       border-radius: 14px;
       font-size: 17px;
-      transition: background 0.2s;
+      transition: background 0.3s ease, border-color 0.3s ease;
+      cursor: grab;
+      user-select: none;
+      /* Animation will be handled via JS for reordering smoothness */
     }
 
-    li:active {
-      background: var(--item-bg);
+    li.dragging {
+      opacity: 0.3;
+      background: var(--primary);
+      transform: scale(0.98);
+      cursor: grabbing;
+      z-index: 100;
+      transition: none;
+      /* Instant during drag start */
     }
 
     li.completed span {
@@ -436,29 +445,74 @@
         taskList.appendChild(li);
 
         li.addEventListener("dragstart", e => {
-          e.dataTransfer.setData("index", index);
+          li.classList.add("dragging");
+          e.dataTransfer.effectAllowed = "move";
         });
 
-        li.addEventListener("dragover", e => {
-          e.preventDefault();
-        });
+        li.addEventListener("dragend", () => {
+          li.classList.remove("dragging");
+          // Clean up any inline reordering styles
+          taskList.querySelectorAll('li').forEach(item => {
+            item.style.transform = '';
+            item.style.transition = '';
+          });
 
-        li.addEventListener("drop", e => {
-          const fromIndex = e.dataTransfer.getData("index");
-          const toIndex = index;
-
-          if (fromIndex !== toIndex) {
-            const movedTask = tasks.splice(fromIndex, 1)[0];
-            tasks.splice(toIndex, 0, movedTask);
-            saveData();
-            renderTasks();
-          }
+          // Update tasks array from DOM order
+          const newTasks = [];
+          const items = taskList.querySelectorAll('li');
+          items.forEach(item => {
+            const text = item.querySelector('span').textContent;
+            const completed = item.classList.contains('completed');
+            newTasks.push({ text, completed });
+          });
+          tasks = newTasks;
+          saveData();
         });
       });
 
       completedTodayEl.textContent = stats.completedToday;
       completedTotalEl.textContent = stats.completedTotal;
     }
+
+    taskList.addEventListener("dragover", e => {
+      e.preventDefault();
+      const draggingItem = document.querySelector(".dragging");
+      if (!draggingItem) return;
+
+      const siblings = [...taskList.querySelectorAll("li:not(.dragging)")];
+
+      const nextSibling = siblings.find(sibling => {
+        const rect = sibling.getBoundingClientRect();
+        return e.clientY <= rect.top + rect.height / 2;
+      });
+
+      if (nextSibling !== draggingItem.nextSibling) {
+        // FLIP animation logic for siblings
+        const itemsToAnimate = [...taskList.querySelectorAll("li")];
+        const oldRects = itemsToAnimate.map(item => item.getBoundingClientRect());
+
+        if (nextSibling) {
+          taskList.insertBefore(draggingItem, nextSibling);
+        } else {
+          taskList.appendChild(draggingItem);
+        }
+
+        // Animate the displacement
+        itemsToAnimate.forEach((item, i) => {
+          if (item === draggingItem) return; // Don't animate the one being held
+          const newRect = item.getBoundingClientRect();
+          const dy = oldRects[i].top - newRect.top;
+
+          if (dy !== 0) {
+            item.style.transition = 'none';
+            item.style.transform = `translateY(${dy}px)`;
+            item.offsetHeight; // trigger reflow
+            item.style.transition = 'transform 0.3s cubic-bezier(0.2, 1, 0.2, 1)';
+            item.style.transform = 'translateY(0)';
+          }
+        });
+      }
+    });
 
     addBtn.addEventListener("click", () => {
       const taskText = taskInput.value.trim();
