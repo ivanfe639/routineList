@@ -265,13 +265,21 @@
       font-family: inherit;
     }
 
-    #filterBtn {
+    #filterBtn,
+    #exportBtn {
       align-self: flex-end;
       background: var(--primary);
       color: white;
       height: 42px;
       /* Match input height roughly */
       margin-bottom: 2px;
+    }
+
+    #exportBtn {
+      background: var(--item-bg);
+      border: 1px solid var(--border);
+      color: var(--primary);
+      margin-left: 10px;
     }
   </style>
 </head>
@@ -299,6 +307,7 @@
         <label>Desde: <input type="date" id="startDate"></label>
         <label>Hasta: <input type="date" id="endDate"></label>
         <button id="filterBtn">Filtrar</button>
+        <button id="exportBtn">📥 Exportar CSV</button>
       </div>
 
       <table id="statsTable"></table>
@@ -309,7 +318,7 @@
     const taskInput = document.getElementById("taskInput");
     const taskList = document.getElementById("taskList");
     const completedTodayEl = document.getElementById("completedToday");
-
+    const completedTotalEl = document.getElementById("completedTotal");
     const statsBtn = document.getElementById("statsBtn");
     const statsView = document.getElementById("statsView");
     const statsTable = document.getElementById("statsTable");
@@ -322,6 +331,7 @@
     const startDateInput = document.getElementById("startDate");
     const endDateInput = document.getElementById("endDate");
     const filterBtn = document.getElementById("filterBtn");
+    const exportBtn = document.getElementById("exportBtn");
 
     // Remove legacy theme code references if need be, but for now update color toggle:
     // Update theme toggle to switch CSS variables instead of hardcoded styles
@@ -466,7 +476,7 @@
     statsBtn.addEventListener("click", () => {
       document.querySelector("ul").style.display = "none";
       document.querySelector(".stats").style.display = "none";
-      statsView.style.display = "block";
+      statsView.style.display = "flex";
       renderStats();
     });
 
@@ -572,7 +582,49 @@
       alert("✅ Datos de prueba generados para 3 días.");
     });
 
+
     filterBtn.addEventListener("click", renderStats);
+
+    exportBtn.addEventListener("click", () => {
+      // Get filtered days first
+      const start = startDateInput.value;
+      const end = endDateInput.value;
+
+      const days = Object.keys(stats.history).sort().filter(day => {
+        if (start && day < start) return false;
+        if (end && day > end) return false;
+        return true;
+      });
+
+      if (days.length === 0) {
+        alert("No hay datos para exportar en este rango.");
+        return;
+      }
+
+      // Build CSV content
+      let csvContent = "data:text/csv;charset=utf-8,";
+      // Header
+      csvContent += "Tarea," + days.join(",") + "\n";
+
+      // Rows
+      tasks.forEach(task => {
+        let row = `"${task.text}"`; // Quote for safety
+        days.forEach(day => {
+          const isComplete = stats.history[day] && stats.history[day][task.text];
+          row += "," + (isComplete ? "Completado" : "Pendiente");
+        });
+        csvContent += row + "\n";
+      });
+
+      // Trigger download
+      const encodedUri = encodeURI(csvContent);
+      const link = document.createElement("a");
+      link.setAttribute("href", encodedUri);
+      link.setAttribute("download", `reporte_tareas_${getToday()}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    });
 
     renderTasks();
   </script>
