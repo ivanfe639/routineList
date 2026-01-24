@@ -336,6 +336,18 @@
         <button id="exportBtn">📥 Exportar CSV</button>
       </div>
 
+      <div id="emailDialog"
+        style="display:none; background: var(--card-bg); padding: 20px; border-radius: 14px; margin: 10px 0; border: 1px solid var(--border); transition: all 0.3s ease;">
+        <p style="margin-bottom: 12px; font-size: 14px;">Ingresa el correo para enviar el reporte:</p>
+        <input type="email" id="destinationEmail" placeholder="ejemplo@correo.com"
+          style="width: 100%; padding: 12px; border-radius: 10px; background: var(--item-bg); border: 1px solid var(--border); color: white; margin-bottom: 15px; box-sizing: border-box;">
+        <div style="display: flex; gap: 10px;">
+          <button id="sendExportBtn" style="flex: 1; background: var(--primary); color: white;">Exportar y
+            Enviar</button>
+          <button id="cancelExportBtn" style="flex: 1;">Cancelar</button>
+        </div>
+      </div>
+
       <table id="statsTable"></table>
 
       <div class="chart-container">
@@ -734,7 +746,25 @@
     filterBtn.addEventListener("click", renderStats);
 
     exportBtn.addEventListener("click", () => {
-      // Get filtered days first
+      document.getElementById("emailDialog").style.display = "block";
+      document.getElementById("destinationEmail").focus();
+    });
+
+    document.getElementById("cancelExportBtn").addEventListener("click", () => {
+      document.getElementById("emailDialog").style.display = "none";
+    });
+
+    document.getElementById("sendExportBtn").addEventListener("click", () => {
+      const emailRecipient = document.getElementById("destinationEmail").value.trim();
+      if (!emailRecipient || !emailRecipient.includes("@")) {
+        alert("Por favor, ingresa un correo electrónico válido.");
+        return;
+      }
+
+      // Hide dialog
+      document.getElementById("emailDialog").style.display = "none";
+
+      // Get filtered days
       const start = startDateInput.value;
       const end = endDateInput.value;
 
@@ -751,12 +781,10 @@
 
       // Build CSV content
       let csvContent = "data:text/csv;charset=utf-8,";
-      // Header
       csvContent += "Tarea," + days.join(",") + "\n";
 
-      // Rows
       tasks.forEach(task => {
-        let row = `"${task.text}"`; // Quote for safety
+        let row = `"${task.text}"`;
         days.forEach(day => {
           const isComplete = stats.history[day] && stats.history[day][task.text];
           row += "," + (isComplete ? "Completado" : "Pendiente");
@@ -772,6 +800,14 @@
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
+
+      // Open email client
+      const subject = encodeURIComponent(`Reporte de Tareas - ${getToday()}`);
+      const body = encodeURIComponent(`Hola,\n\nSe adjunta el reporte de tareas generado.\n\n[Recordatorio: Por favor, adjunta manualmente el archivo CSV que se acaba de descargar].`);
+
+      setTimeout(() => {
+        window.location.href = `mailto:${emailRecipient}?subject=${subject}&body=${body}`;
+      }, 500);
     });
 
     renderTasks();
