@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Lista de Tareas con Estadísticas</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #121212;
+      color: #e0e0e0;
+      display: flex;
+      justify-content: center;
+      margin-top: 30px;
+    }
+    .container {
+      background: #1e1e1e;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.6);
+      width: 90%;
+      max-width: 1000px;
+    }
+    h2 {
+      text-align: center;
+    }
+    #taskInput {
+      width: 60%;
+      padding: 8px;
+      background: #2a2a2a;
+      border: 1px solid #444;
+      color: #e0e0e0;
+      border-radius: 4px;
+    }
+    #addBtn, #statsBtn, #backBtn {
+      padding: 8px;
+      margin-left: 5px;
+      cursor: pointer;
+      background: #3a3a3a;
+      border: 1px solid #555;
+      color: #e0e0e0;
+      border-radius: 4px;
+    }
+    #addBtn:hover, #statsBtn:hover, #backBtn:hover {
+      background: #555;
+    }
+    ul {
+      list-style: none;
+      padding: 0;
+      margin-top: 15px;
+    }
+    li {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 8px;
+      background: #2a2a2a;
+      padding: 5px;
+      border-radius: 4px;
+      cursor: grab;
+    }
+    li.completed span {
+      text-decoration: line-through;
+      color: #888;
+    }
+    .deleteBtn {
+      background: transparent;
+      color: #ff4d4d;
+      border: none;
+      font-size: 18px;
+      cursor: pointer;
+    }
+    .deleteBtn:hover {
+      color: #ff6666;
+    }
+    .stats {
+      margin-top: 15px;
+      font-size: 14px;
+      color: #b0b0b0;
+    }
+    /* Vista de estadísticas */
+    #statsView {
+      display: none;
+      margin-top: 20px;
+      overflow-x: auto;
+    }
+    table {
+      border-collapse: collapse;
+      width: 100%;
+      font-size: 12px;
+    }
+    th, td {
+      border: 1px solid #444;
+      padding: 4px;
+      text-align: center;
+    }
+    th {
+      background: #2a2a2a;
+      color: #e0e0e0;
+      position: sticky;
+      top: 0;
+    }
+    td.completed {
+      background: #4caf50;
+      color: #fff;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>Lista de Tareas</h2>
+    <input type="text" id="taskInput" placeholder="Escribe una tarea...">
+    <button id="addBtn">Agregar</button>
+    <button id="statsBtn">📊 Estadísticas</button>
+    <ul id="taskList"></ul>
+    <div class="stats">
+      <p>Tareas completadas hoy: <span id="completedToday">0</span></p>
+      <p>Total acumulado: <span id="completedTotal">0</span></p>
+    </div>
+
+    <!-- Vista de estadísticas -->
+    <div id="statsView">
+      <h2>Estadísticas de Tareas por Día</h2>
+      <button id="backBtn">⬅ Volver</button>
+      <table id="statsTable"></table>
+    </div>
+  </div>
+
+  <script>
+    const addBtn = document.getElementById("addBtn");
+    const taskInput = document.getElementById("taskInput");
+    const taskList = document.getElementById("taskList");
+    const completedTodayEl = document.getElementById("completedToday");
+    const completedTotalEl = document.getElementById("completedTotal");
+    const statsBtn = document.getElementById("statsBtn");
+    const statsView = document.getElementById("statsView");
+    const statsTable = document.getElementById("statsTable");
+    const backBtn = document.getElementById("backBtn");
+
+    let tasks = JSON.parse(localStorage.getItem("tasks")) || [];
+    let stats = JSON.parse(localStorage.getItem("stats")) || { completedToday: 0, completedTotal: 0, lastDate: getToday(), history: {} };
+
+    function getToday() {
+      const d = new Date();
+      return d.toISOString().split("T")[0];
+    }
+
+    if (stats.lastDate !== getToday()) {
+      tasks.forEach(t => t.completed = false);
+      stats.completedToday = 0;
+      stats.lastDate = getToday();
+      saveData();
+    }
+
+    function saveData() {
+      localStorage.setItem("tasks", JSON.stringify(tasks));
+      localStorage.setItem("stats", JSON.stringify(stats));
+    }
+
+    function renderTasks() {
+      taskList.innerHTML = "";
+      tasks.forEach((task, index) => {
+        const li = document.createElement("li");
+        li.draggable = true;
+        if (task.completed) li.classList.add("completed");
+
+        const checkbox = document.createElement("input");
+        checkbox.type = "checkbox";
+        checkbox.checked = task.completed;
+
+        const span = document.createElement("span");
+        span.textContent = task.text;
+
+        const deleteBtn = document.createElement("button");
+        deleteBtn.textContent = "❌";
+        deleteBtn.classList.add("deleteBtn");
+
+        deleteBtn.addEventListener("click", () => {
+          if (task.completed) stats.completedToday--;
+          tasks.splice(index, 1);
+          saveData();
+          renderTasks();
+        });
+
+        checkbox.addEventListener("change", () => {
+          task.completed = checkbox.checked;
+          if (checkbox.checked) {
+            stats.completedToday++;
+            stats.completedTotal++;
+            if (!stats.history[getToday()]) stats.history[getToday()] = {};
+            stats.history[getToday()][task.text] = true;
+          } else {
+            stats.completedToday--;
+            if (stats.history[getToday()]) stats.history[getToday()][task.text] = false;
+          }
+          saveData();
+          renderTasks();
+        });
+
+        li.appendChild(checkbox);
+        li.appendChild(span);
+        li.appendChild(deleteBtn);
+        taskList.appendChild(li);
+
+        // Drag & Drop
+        li.addEventListener("dragstart", e => {
+          e.dataTransfer.setData("index", index);
+        });
+        li.addEventListener("dragover", e => {
+          e.preventDefault();
+        });
+        li.addEventListener("drop", e => {
+          const fromIndex = e.dataTransfer.getData("index");
+          const toIndex = index;
+          if (fromIndex !== toIndex) {
+            const movedTask = tasks.splice(fromIndex, 1)[0];
+            tasks.splice(toIndex, 0, movedTask);
+            saveData();
+            renderTasks();
+          }
+        });
+      });
+
+      completedTodayEl.textContent = stats.completedToday;
+      completedTotalEl.textContent = stats.completedTotal;
+    }
+
+    addBtn.addEventListener("click", () => {
+      const taskText = taskInput.value.trim();
+      if (taskText !== "") {
+        tasks.push({ text: taskText, completed: false });
+        taskInput.value = "";
+        saveData();
+        renderTasks();
+      }
+    });
+
+    statsBtn.addEventListener("click", () => {
+      document.querySelector("ul").style.display = "none";
+      document.querySelector(".stats").style.display = "none";
+      statsView.style.display = "block";
+      renderStats();
+    });
+
+    backBtn.addEventListener("click", () => {
+      statsView.style.display = "none";
+      document.querySelector("ul").style.display = "block";
+      document.querySelector(".stats").style.display = "block";
+    });
+
+    function renderStats() {
+      statsTable.innerHTML = "";
+      const days = Object.keys(stats.history).sort();
+      const headerRow = document.createElement("tr");
+      const thTask = document.createElement("th");
+      thTask.textContent = "Tarea";
+      headerRow.appendChild(thTask);
+      days.forEach(day => {
+        const th = document.createElement("th");
+        th.textContent = day;
+        headerRow.appendChild(th);
+      });
+      statsTable.appendChild(headerRow);
+
+      tasks.forEach(task => {
+        const row = document.createElement("tr");
+        const tdTask = document.createElement("td");
+        tdTask.textContent = task.text;
+        row.appendChild(tdTask);
+        days.forEach(day => {
+          const td = document.createElement("td");
+          if (stats.history[day] && stats.history[day][task.text]) {
+            td.classList.add("completed");
+            td.textContent
