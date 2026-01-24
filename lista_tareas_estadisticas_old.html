@@ -1,6 +1,6 @@
+
 <!DOCTYPE html>
 <html lang="es">
-
 <head>
   <meta charset="UTF-8">
   <title>Lista de Tareas con Estadísticas</title>
@@ -13,20 +13,17 @@
       justify-content: center;
       margin-top: 30px;
     }
-
     .container {
       background: #1e1e1e;
       padding: 20px;
       border-radius: 8px;
-      box-shadow: 0 0 10px rgba(0, 0, 0, 0.6);
+      box-shadow: 0 0 10px rgba(0,0,0,0.6);
       width: 90%;
       max-width: 1000px;
     }
-
     h2 {
       text-align: center;
     }
-
     #taskInput {
       width: 60%;
       padding: 8px;
@@ -35,12 +32,7 @@
       color: #e0e0e0;
       border-radius: 4px;
     }
-
-    #addBtn,
-    #statsBtn,
-    #backBtn,
-    #toggleBtn,
-    #testBtn {
+    #addBtn, #statsBtn, #backBtn, #toggleBtn {
       padding: 8px;
       margin-left: 5px;
       cursor: pointer;
@@ -49,12 +41,7 @@
       color: #e0e0e0;
       border-radius: 4px;
     }
-
-    #addBtn:hover,
-    #statsBtn:hover,
-    #backBtn:hover,
-    #toggleBtn:hover,
-    #testBtn:hover {
+    #addBtn:hover, #statsBtn:hover, #backBtn:hover, #toggleBtn:hover {
       background: #555;
     }
 
@@ -62,8 +49,7 @@
       width: 26px;
       height: 26px;
       cursor: pointer;
-      accent-color: #4caf50;
-      /* opcional: cambia el color del check */
+      accent-color: #4caf50; /* opcional: cambia el color del check */
     }
 
     ul {
@@ -71,7 +57,6 @@
       padding: 0;
       margin-top: 15px;
     }
-
     li {
       display: flex;
       align-items: center;
@@ -80,16 +65,13 @@
       background: #2a2a2a;
       padding: 5px;
       border-radius: 4px;
-      font-size: 26px;
-      /* 👈 texto de las tareas */
+      font-size: 26px; /* 👈 texto de las tareas */
       cursor: grab;
     }
-
     li.completed span {
       text-decoration: line-through;
       color: #888;
     }
-
     .deleteBtn {
       background: transparent;
       color: #ff4d4d;
@@ -97,50 +79,41 @@
       font-size: 18px;
       cursor: pointer;
     }
-
     .deleteBtn:hover {
       color: #ff6666;
     }
-
     .stats {
       margin-top: 15px;
       font-size: 14px;
       color: #b0b0b0;
     }
-
     #statsView {
       display: none;
       margin-top: 20px;
       overflow-x: auto;
     }
-
     table {
       border-collapse: collapse;
       width: 100%;
       font-size: 12px;
     }
-
-    th,
-    td {
+    th, td {
       border: 1px solid #444;
       padding: 4px;
       text-align: center;
     }
-
     th {
       background: #2a2a2a;
       color: #e0e0e0;
       position: sticky;
       top: 0;
     }
-
     td.completed {
       background: #4caf50;
       color: #fff;
     }
   </style>
 </head>
-
 <body>
   <div class="container">
     <h2>Lista de Tareas</h2>
@@ -148,7 +121,6 @@
     <button id="addBtn">Agregar</button>
     <button id="statsBtn">📊 Estadísticas</button>
     <button id="toggleBtn">🌗 Tema</button>
-    <button id="testBtn">🎲 Datos Prueba</button>
     <ul id="taskList"></ul>
     <div class="stats">
       <p>Tareas completadas hoy: <span id="completedToday">0</span></p>
@@ -178,11 +150,9 @@
     let stats = JSON.parse(localStorage.getItem("stats")) || { completedToday: 0, completedTotal: 0, lastDate: getToday(), history: {} };
     let theme = localStorage.getItem("theme") || "dark";
 
-    function getToday(d = new Date()) {
-      // Define la zona horaria deseada, por ejemplo 'America/Bogota', 'America/Mexico_City', etc.
-      const timeZone = 'America/Bogota';
-      // Usamos locale 'sv-SE' para obtener formato YYYY-MM-DD
-      return new Intl.DateTimeFormat('sv-SE', { timeZone }).format(d);
+    function getToday() {
+      const d = new Date();
+      return d.toISOString().split("T")[0];
     }
 
     if (stats.lastDate !== getToday()) {
@@ -329,44 +299,7 @@
       });
     }
 
-    // Botón para generar datos de prueba
-    document.getElementById("testBtn").addEventListener("click", () => {
-      // Si no hay tareas, agregamos algunas
-      if (tasks.length === 0) {
-        tasks.push({ text: "Aprender JS", completed: false });
-        tasks.push({ text: "Hacer ejercicio", completed: false });
-        tasks.push({ text: "Leer documentación", completed: false });
-      }
-
-      const today = new Date();
-      // Generar datos para hoy y los 2 días anteriores
-      for (let i = 0; i < 3; i++) {
-        const d = new Date(today);
-        d.setDate(today.getDate() - i);
-        const dayStr = getToday(d); // Usa la fecha pasada
-
-        if (!stats.history[dayStr]) {
-          stats.history[dayStr] = {};
-        }
-
-        tasks.forEach(task => {
-          // Asigna completado aleatoriamente (50/50)
-          stats.history[dayStr][task.text] = Math.random() > 0.5;
-        });
-      }
-
-      // Guardar y refrescar
-      saveData();
-      renderTasks();
-      // Si estamos viendo estadísticas, refrescarlas
-      if (statsView.style.display === 'block') {
-        renderStats();
-      }
-      alert("✅ Datos de prueba generados para 3 días.");
-    });
-
     renderTasks();
   </script>
 </body>
-
 </html>
