@@ -3,140 +3,275 @@
 
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Lista de Tareas con Estadísticas</title>
   <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+    :root {
+      --bg-color: #000000;
+      --card-bg: #1c1c1e;
+      --item-bg: #2c2c2e;
+      --primary: #0a84ff;
+      --text-main: #ffffff;
+      --text-sec: #8e8e93;
+      --danger: #ff453a;
+      --border: #38383a;
+    }
+
     body {
-      font-family: Arial, sans-serif;
-      background-color: #121212;
-      color: #e0e0e0;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background-color: var(--bg-color);
+      color: var(--text-main);
       display: flex;
       justify-content: center;
-      margin-top: 30px;
+      margin: 0;
+      min-height: 100vh;
+      -webkit-font-smoothing: antialiased;
     }
 
     .container {
-      background: #1e1e1e;
+      background: var(--bg-color);
+      /* Full black for OLED feel or app bg */
+      width: 100%;
+      max-width: 480px;
+      /* Mobile width constraint on desktop */
+      min-height: 100vh;
       padding: 20px;
-      border-radius: 8px;
-      box-shadow: 0 0 10px rgba(0, 0, 0, 0.6);
-      width: 90%;
-      max-width: 1000px;
+      /* Safe area padding */
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      box-sizing: border-box;
+      border-left: 1px solid #222;
+      border-right: 1px solid #222;
+    }
+
+    /* Desktop tweaks */
+    @media (min-width: 600px) {
+      .container {
+        border-radius: 40px;
+        /* Phone frame look */
+        margin-top: 20px;
+        margin-bottom: 20px;
+        min-height: calc(100vh - 40px);
+        height: auto;
+        box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+        border: 1px solid #333;
+        overflow: hidden;
+        /* rounded corners fix */
+      }
     }
 
     h2 {
       text-align: center;
+      font-weight: 700;
+      margin-bottom: 24px;
+      font-size: 22px;
     }
 
     #taskInput {
-      width: 60%;
-      padding: 8px;
-      background: #2a2a2a;
-      border: 1px solid #444;
-      color: #e0e0e0;
-      border-radius: 4px;
+      width: 100%;
+      padding: 16px;
+      background: var(--card-bg);
+      border: none;
+      color: var(--text-main);
+      border-radius: 14px;
+      font-size: 17px;
+      margin-bottom: 16px;
+      outline: none;
+      box-sizing: border-box;
+      transition: background 0.2s;
     }
 
-    #addBtn,
-    #statsBtn,
-    #backBtn,
-    #toggleBtn,
-    #testBtn {
-      padding: 8px;
-      margin-left: 5px;
+    #taskInput:focus {
+      background: #2c2c2e;
+    }
+
+    /* Button area layout */
+    .button-row {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+    }
+
+    .button-row>* {
+      flex: 1;
+    }
+
+    button {
+      padding: 12px;
       cursor: pointer;
-      background: #3a3a3a;
-      border: 1px solid #555;
-      color: #e0e0e0;
-      border-radius: 4px;
+      border: none;
+      border-radius: 12px;
+      font-weight: 600;
+      font-size: 14px;
+      transition: transform 0.1s, opacity 0.2s;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--item-bg);
+      color: var(--primary);
+      min-height: 44px;
+      /* Mobile touch target */
     }
 
-    #addBtn:hover,
-    #statsBtn:hover,
-    #backBtn:hover,
-    #toggleBtn:hover,
-    #testBtn:hover {
-      background: #555;
+    button:active {
+      transform: scale(0.97);
+      opacity: 0.8;
     }
 
-    input[type="checkbox"] {
-      width: 26px;
-      height: 26px;
-      cursor: pointer;
-      accent-color: #4caf50;
-      /* opcional: cambia el color del check */
+    #addBtn {
+      background: var(--primary);
+      color: white;
+      width: 100%;
+      margin-bottom: 12px;
+      font-size: 16px;
     }
 
+    /* List styling */
     ul {
       list-style: none;
       padding: 0;
-      margin-top: 15px;
+      margin-top: 10px;
+      flex-grow: 1;
+      /* Pushes stats down */
+      overflow-y: auto;
     }
 
     li {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      margin-bottom: 8px;
-      background: #2a2a2a;
-      padding: 5px;
-      border-radius: 4px;
-      font-size: 26px;
-      /* 👈 texto de las tareas */
-      cursor: grab;
+      margin-bottom: 10px;
+      background: var(--card-bg);
+      padding: 16px;
+      border-radius: 14px;
+      font-size: 17px;
+      transition: background 0.2s;
+    }
+
+    li:active {
+      background: var(--item-bg);
     }
 
     li.completed span {
       text-decoration: line-through;
-      color: #888;
+      color: var(--text-sec);
+    }
+
+    input[type="checkbox"] {
+      width: 22px;
+      height: 22px;
+      accent-color: var(--primary);
+      margin-right: 14px;
+      cursor: pointer;
+      border-radius: 6px;
     }
 
     .deleteBtn {
       background: transparent;
-      color: #ff4d4d;
-      border: none;
-      font-size: 18px;
-      cursor: pointer;
-    }
-
-    .deleteBtn:hover {
-      color: #ff6666;
+      color: var(--danger);
+      padding: 8px;
     }
 
     .stats {
-      margin-top: 15px;
-      font-size: 14px;
-      color: #b0b0b0;
+      margin-top: 20px;
+      background: var(--card-bg);
+      padding: 15px;
+      border-radius: 14px;
+      color: var(--text-sec);
+      text-align: center;
+      font-size: 13px;
     }
 
+    .stats span {
+      color: var(--text-main);
+      font-weight: 600;
+      font-size: 15px;
+    }
+
+    /* Full screen stats view */
     #statsView {
+      background: var(--bg-color);
+      position: absolute;
+      /* Contain within container */
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      z-index: 100;
+      padding: 20px;
       display: none;
-      margin-top: 20px;
-      overflow-x: auto;
+      flex-direction: column;
     }
 
     table {
-      border-collapse: collapse;
       width: 100%;
-      font-size: 12px;
+      border-collapse: separate;
+      border-spacing: 0;
+      margin-top: 20px;
     }
 
     th,
     td {
-      border: 1px solid #444;
-      padding: 4px;
+      padding: 12px 8px;
+      border-bottom: 1px solid var(--border);
       text-align: center;
+      font-size: 13px;
     }
 
     th {
-      background: #2a2a2a;
-      color: #e0e0e0;
+      color: var(--text-sec);
+      font-weight: 600;
       position: sticky;
       top: 0;
+      background: var(--bg-color);
     }
 
     td.completed {
-      background: #4caf50;
-      color: #fff;
+      color: var(--primary);
+    }
+
+    td.missed {
+      color: var(--danger);
+    }
+
+    .date-filters {
+      display: flex;
+      gap: 10px;
+      margin: 20px 0;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+
+    .date-filters label {
+      display: flex;
+      flex-direction: column;
+      color: var(--text-sec);
+      font-size: 13px;
+      text-align: left;
+    }
+
+    input[type="date"] {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      color: var(--text-main);
+      padding: 10px;
+      border-radius: 8px;
+      outline: none;
+      margin-top: 5px;
+      font-family: inherit;
+    }
+
+    #filterBtn {
+      align-self: flex-end;
+      background: var(--primary);
+      color: white;
+      height: 42px;
+      /* Match input height roughly */
+      margin-bottom: 2px;
     }
   </style>
 </head>
@@ -144,11 +279,13 @@
 <body>
   <div class="container">
     <h2>Lista de Tareas</h2>
-    <input type="text" id="taskInput" placeholder="Escribe una tarea...">
+    <input type="text" id="taskInput" placeholder="Añadir nueva tarea...">
     <button id="addBtn">Agregar</button>
-    <button id="statsBtn">📊 Estadísticas</button>
-    <button id="toggleBtn">🌗 Tema</button>
-    <button id="testBtn">🎲 Datos Prueba</button>
+    <div class="button-row">
+      <button id="statsBtn">📊 Estadísticas</button>
+      <button id="toggleBtn">🌗 Tema</button>
+      <button id="testBtn">🎲 Test</button>
+    </div>
     <ul id="taskList"></ul>
     <div class="stats">
       <p>Tareas completadas hoy: <span id="completedToday">0</span></p>
@@ -157,6 +294,13 @@
     <div id="statsView">
       <h2>Estadísticas de Tareas por Día</h2>
       <button id="backBtn">⬅ Volver</button>
+
+      <div class="date-filters">
+        <label>Desde: <input type="date" id="startDate"></label>
+        <label>Hasta: <input type="date" id="endDate"></label>
+        <button id="filterBtn">Filtrar</button>
+      </div>
+
       <table id="statsTable"></table>
     </div>
   </div>
@@ -165,7 +309,7 @@
     const taskInput = document.getElementById("taskInput");
     const taskList = document.getElementById("taskList");
     const completedTodayEl = document.getElementById("completedToday");
-    const completedTotalEl = document.getElementById("completedTotal");
+
     const statsBtn = document.getElementById("statsBtn");
     const statsView = document.getElementById("statsView");
     const statsTable = document.getElementById("statsTable");
@@ -174,15 +318,47 @@
     const container = document.querySelector(".container");
     const body = document.body;
 
+    // Date filter elements
+    const startDateInput = document.getElementById("startDate");
+    const endDateInput = document.getElementById("endDate");
+    const filterBtn = document.getElementById("filterBtn");
+
+    // Remove legacy theme code references if need be, but for now update color toggle:
+    // Update theme toggle to switch CSS variables instead of hardcoded styles
     let tasks = JSON.parse(localStorage.getItem("tasks")) || [];
     let stats = JSON.parse(localStorage.getItem("stats")) || { completedToday: 0, completedTotal: 0, lastDate: getToday(), history: {} };
     let theme = localStorage.getItem("theme") || "dark";
 
+    // Apply saved theme on load
+    const applyTheme = (t) => {
+      if (t === 'light') {
+        body.classList.add('light-mode');
+        document.documentElement.style.setProperty('--bg-color', '#f2f2f7');
+        document.documentElement.style.setProperty('--card-bg', '#ffffff');
+        document.documentElement.style.setProperty('--text-main', '#000000');
+      } else {
+        body.classList.remove('light-mode');
+        document.documentElement.style.setProperty('--bg-color', '#000000');
+        document.documentElement.style.setProperty('--card-bg', '#1c1c1e');
+        document.documentElement.style.setProperty('--text-main', '#ffffff');
+      }
+    };
+    applyTheme(theme);
+
+    toggleBtn.addEventListener("click", () => {
+      theme = theme === "dark" ? "light" : "dark";
+      applyTheme(theme);
+      saveData();
+    });
+
     function getToday(d = new Date()) {
       // Define la zona horaria deseada, por ejemplo 'America/Bogota', 'America/Mexico_City', etc.
       const timeZone = 'America/Bogota';
+
       // Usamos locale 'sv-SE' para obtener formato YYYY-MM-DD
-      return new Intl.DateTimeFormat('sv-SE', { timeZone }).format(d);
+      return new Intl.DateTimeFormat('sv-SE', {
+        timeZone
+      }).format(d);
     }
 
     if (stats.lastDate !== getToday()) {
@@ -200,6 +376,7 @@
 
     function renderTasks() {
       taskList.innerHTML = "";
+
       tasks.forEach((task, index) => {
         const li = document.createElement("li");
         li.draggable = true;
@@ -225,15 +402,20 @@
 
         checkbox.addEventListener("change", () => {
           task.completed = checkbox.checked;
+
           if (checkbox.checked) {
             stats.completedToday++;
             stats.completedTotal++;
+
             if (!stats.history[getToday()]) stats.history[getToday()] = {};
             stats.history[getToday()][task.text] = true;
-          } else {
+          }
+
+          else {
             stats.completedToday--;
             if (stats.history[getToday()]) stats.history[getToday()][task.text] = false;
           }
+
           saveData();
           renderTasks();
         });
@@ -246,12 +428,15 @@
         li.addEventListener("dragstart", e => {
           e.dataTransfer.setData("index", index);
         });
+
         li.addEventListener("dragover", e => {
           e.preventDefault();
         });
+
         li.addEventListener("drop", e => {
           const fromIndex = e.dataTransfer.getData("index");
           const toIndex = index;
+
           if (fromIndex !== toIndex) {
             const movedTask = tasks.splice(fromIndex, 1)[0];
             tasks.splice(toIndex, 0, movedTask);
@@ -267,8 +452,11 @@
 
     addBtn.addEventListener("click", () => {
       const taskText = taskInput.value.trim();
+
       if (taskText !== "") {
-        tasks.push({ text: taskText, completed: false });
+        tasks.push({
+          text: taskText, completed: false
+        });
         taskInput.value = "";
         saveData();
         renderTasks();
@@ -288,21 +476,24 @@
       document.querySelector(".stats").style.display = "block";
     });
 
-    toggleBtn.addEventListener("click", () => {
-      theme = theme === "dark" ? "light" : "dark";
-      body.style.backgroundColor = theme === "dark" ? "#121212" : "#f4f4f4";
-      body.style.color = theme === "dark" ? "#e0e0e0" : "#121212";
-      container.style.background = theme === "dark" ? "#1e1e1e" : "#ffffff";
-      saveData();
-    });
-
     function renderStats() {
       statsTable.innerHTML = "";
-      const days = Object.keys(stats.history).sort();
+
+      // Filter dates
+      const start = startDateInput.value;
+      const end = endDateInput.value;
+
+      const days = Object.keys(stats.history).sort().filter(day => {
+        if (start && day < start) return false;
+        if (end && day > end) return false;
+        return true;
+      });
+
       const headerRow = document.createElement("tr");
       const thTask = document.createElement("th");
       thTask.textContent = "Tarea";
       headerRow.appendChild(thTask);
+
       days.forEach(day => {
         const th = document.createElement("th");
         th.textContent = day;
@@ -315,14 +506,18 @@
         const tdTask = document.createElement("td");
         tdTask.textContent = task.text;
         row.appendChild(tdTask);
+
         days.forEach(day => {
           const td = document.createElement("td");
+
           if (stats.history[day] && stats.history[day][task.text]) {
             td.classList.add("completed");
             td.textContent = "✔";
           } else {
-            td.textContent = "";
+            td.classList.add("missed");
+            td.textContent = "❌";
           }
+
           row.appendChild(td);
         });
         statsTable.appendChild(row);
@@ -331,14 +526,24 @@
 
     // Botón para generar datos de prueba
     document.getElementById("testBtn").addEventListener("click", () => {
+
       // Si no hay tareas, agregamos algunas
       if (tasks.length === 0) {
-        tasks.push({ text: "Aprender JS", completed: false });
-        tasks.push({ text: "Hacer ejercicio", completed: false });
-        tasks.push({ text: "Leer documentación", completed: false });
+        tasks.push({
+          text: "Aprender JS", completed: false
+        });
+
+        tasks.push({
+          text: "Hacer ejercicio", completed: false
+        });
+
+        tasks.push({
+          text: "Leer documentación", completed: false
+        });
       }
 
       const today = new Date();
+
       // Generar datos para hoy y los 2 días anteriores
       for (let i = 0; i < 3; i++) {
         const d = new Date(today);
@@ -358,12 +563,16 @@
       // Guardar y refrescar
       saveData();
       renderTasks();
+
       // Si estamos viendo estadísticas, refrescarlas
       if (statsView.style.display === 'block') {
         renderStats();
       }
+
       alert("✅ Datos de prueba generados para 3 días.");
     });
+
+    filterBtn.addEventListener("click", renderStats);
 
     renderTasks();
   </script>
