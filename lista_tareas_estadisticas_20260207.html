@@ -321,8 +321,7 @@
     }
 
     #exportBtn,
-    #todayBtn,
-    #importBtn {
+    #todayBtn {
       background: var(--item-bg);
       border: 1px solid var(--border);
       color: var(--primary);
@@ -333,8 +332,7 @@
       background: rgba(255, 69, 58, 0.1);
       border: 1px solid var(--danger);
       color: var(--danger);
-      width: 100%;
-      margin-top: 10px;
+      margin-left: 10px;
     }
 
     #testBtn {
@@ -370,8 +368,7 @@
         <button id="todayBtn">📅 Hoy</button>
         <button id="filterBtn">Filtrar</button>
         <button id="exportBtn">📥 Exportar CSV</button>
-        <button id="importBtn">📤 Importar CSV</button>
-        <input type="file" id="importFile" accept=".csv" style="display: none;">
+        <button id="deleteStatsBtn">🗑️ Borrar Rango</button>
       </div>
 
 
@@ -382,7 +379,6 @@
         <div class="chart-container">
           <canvas id="statsChart"></canvas>
         </div>
-        <button id="deleteStatsBtn">🗑️ Borrar Rango de Datos</button>
       </div>
     </div>
   </div>
@@ -407,8 +403,6 @@
     const filterBtn = document.getElementById("filterBtn");
     const exportBtn = document.getElementById("exportBtn");
     const todayBtn = document.getElementById("todayBtn");
-    const importBtn = document.getElementById("importBtn");
-    const importFile = document.getElementById("importFile");
     const deleteStatsBtn = document.getElementById("deleteStatsBtn");
     let statsChartInstance = null;
 
@@ -438,9 +432,6 @@
       theme = theme === "dark" ? "light" : "dark";
       applyTheme(theme);
       saveData();
-      if (statsView.style.display === "flex") {
-        renderStats();
-      }
     });
 
     function getToday(d = new Date()) {
@@ -650,12 +641,6 @@
       const ctx = chartCanvas.getContext('2d');
       if (statsChartInstance) statsChartInstance.destroy();
 
-      // Theme colors for Chart
-      const isDark = theme === "dark";
-      const mainTextColor = isDark ? '#ffffff' : '#000000';
-      const secTextColor = '#8e8e93';
-      const gridLineColor = isDark ? '#38383a' : '#e5e5ea';
-
       // Dynamic height based on task count
       const dynamicHeight = Math.max(250, tasks.length * 40 + 80);
       chartCanvas.parentNode.style.height = `${dynamicHeight}px`;
@@ -682,12 +667,12 @@
             title: {
               display: true,
               text: 'Total Acumulado',
-              color: mainTextColor,
+              color: '#ffffff',
               font: { size: 16, weight: 'bold', family: 'Inter' },
               padding: { bottom: 10 }
             },
             datalabels: {
-              color: '#ffffff', // Keep white for contrast on blue bars
+              color: '#ffffff',
               anchor: 'center',
               align: 'center',
               font: { weight: 'bold', size: 12 },
@@ -698,11 +683,11 @@
             x: {
               beginAtZero: true,
               grid: { display: false },
-              ticks: { color: secTextColor, stepSize: 1 }
+              ticks: { color: '#8e8e93', stepSize: 1 }
             },
             y: {
-              grid: { color: gridLineColor },
-              ticks: { color: mainTextColor }
+              grid: { color: '#38383a' },
+              ticks: { color: '#ffffff' }
             }
           }
         }
@@ -901,69 +886,6 @@
       setTimeout(() => {
         window.location.href = `mailto:${emailRecipient}?subject=${subject}&body=${body}`;
       }, 500);
-    });
-
-    importBtn.addEventListener("click", () => importFile.click());
-
-    importFile.addEventListener("change", (e) => {
-      const file = e.target.files[0];
-      if (!file) return;
-
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        const text = event.target.result;
-        const lines = text.split(/\r?\n/).filter(line => line.trim() !== "");
-        if (lines.length < 2) return;
-
-        // Parse header (dates)
-        const header = lines[0].split(",");
-        const dates = header.slice(1);
-
-        lines.slice(1).forEach(line => {
-          // Handle quotes in task names using regex to split by comma but ignore commas inside quotes
-          const parts = line.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
-          if (parts.length < 2) return;
-
-          let taskName = parts[0].replace(/^"|"$/g, '').trim();
-
-          // Ensure task exists in current tasks list
-          if (!tasks.some(t => t.text === taskName)) {
-            tasks.push({ text: taskName, completed: false });
-          }
-
-          dates.forEach((day, index) => {
-            const status = parts[index + 1];
-            if (!day || !status) return;
-
-            if (!stats.history[day.trim()]) stats.history[day.trim()] = {};
-            stats.history[day.trim()][taskName] = (status.trim() === "Completado");
-          });
-        });
-
-        // Update totals for today just in case
-        const todayStr = getToday();
-        if (stats.history[todayStr]) {
-          let count = 0;
-          tasks.forEach(task => {
-            if (stats.history[todayStr][task.text]) {
-              task.completed = true;
-              count++;
-            } else {
-              task.completed = false;
-            }
-          });
-          stats.completedToday = count;
-        }
-
-        saveData();
-        renderTasks();
-        if (statsView.style.display === "flex") {
-          renderStats();
-        }
-        alert("✅ Datos importados correctamente.");
-        importFile.value = ""; // Reset for next use
-      };
-      reader.readAsText(file);
     });
 
     renderTasks();
