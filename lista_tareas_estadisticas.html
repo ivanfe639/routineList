@@ -142,6 +142,44 @@
       font-size: 16px;
     }
 
+    #taskType {
+      width: 100%;
+      padding: 12px;
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      color: var(--text-main);
+      border-radius: 12px;
+      font-size: 15px;
+      margin-bottom: 12px;
+      outline: none;
+      appearance: none;
+      cursor: pointer;
+    }
+
+    .counter-controls {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .count-btn {
+      width: 32px;
+      height: 32px;
+      min-height: 32px;
+      padding: 0;
+      border-radius: 8px;
+      background: var(--item-bg);
+      color: var(--primary);
+      font-size: 18px;
+    }
+
+    .count-val {
+      font-weight: 700;
+      min-width: 20px;
+      text-align: center;
+      font-variant-numeric: tabular-nums;
+    }
+
     /* List styling */
     ul {
       list-style: none;
@@ -187,6 +225,11 @@
     li.completed span {
       text-decoration: line-through;
       color: var(--text-sec);
+    }
+
+    li.is-counter span {
+      text-decoration: none !important;
+      color: var(--text-main) !important;
     }
 
     input[type="checkbox"] {
@@ -349,6 +392,10 @@
   <div class="container">
     <h2>Lista de Tareas</h2>
     <input type="text" id="taskInput" placeholder="Añadir nueva tarea...">
+    <select id="taskType">
+      <option value="check"> Check ✔</option>
+      <option value="counter"> Contador 🔢</option>
+    </select>
     <button id="addBtn">Agregar</button>
     <div class="button-row">
       <button id="statsBtn">📊 Estadísticas</button>
@@ -379,8 +426,11 @@
       <div class="stats-scroll-area">
         <table id="statsTable"></table>
 
-        <div class="chart-container">
-          <canvas id="statsChart"></canvas>
+        <div class="chart-container" id="checkChartContainer">
+          <canvas id="statsChartCheck"></canvas>
+        </div>
+        <div class="chart-container" id="counterChartContainer">
+          <canvas id="statsChartCounter"></canvas>
         </div>
         <button id="deleteStatsBtn">🗑️ Borrar Rango de Datos</button>
       </div>
@@ -389,6 +439,7 @@
   <script>
     const addBtn = document.getElementById("addBtn");
     const taskInput = document.getElementById("taskInput");
+    const taskType = document.getElementById("taskType");
     const taskList = document.getElementById("taskList");
     const completedTodayEl = document.getElementById("completedToday");
 
@@ -410,7 +461,8 @@
     const importBtn = document.getElementById("importBtn");
     const importFile = document.getElementById("importFile");
     const deleteStatsBtn = document.getElementById("deleteStatsBtn");
-    let statsChartInstance = null;
+    let statsChartCheckInstance = null;
+    let statsChartCounterInstance = null;
 
     // Remove legacy theme code references if need be, but for now update color toggle:
     // Update theme toggle to switch CSS variables instead of hardcoded styles
@@ -454,7 +506,10 @@
     }
 
     if (stats.lastDate !== getToday()) {
-      tasks.forEach(t => t.completed = false);
+      tasks.forEach(t => {
+        t.completed = false;
+        if (t.type === 'counter') t.count = 0;
+      });
       stats.completedToday = 0;
       stats.lastDate = getToday();
       saveData();
@@ -473,47 +528,96 @@
         const li = document.createElement("li");
         li.draggable = true;
         if (task.completed) li.classList.add("completed");
-
-        const checkbox = document.createElement("input");
-        checkbox.type = "checkbox";
-        checkbox.checked = task.completed;
+        if (task.type === "counter") li.classList.add("is-counter");
 
         const span = document.createElement("span");
         span.textContent = task.text;
+        span.style.flex = "1";
+        span.style.marginLeft = "10px";
+
+        const controlContainer = document.createElement("div");
+        controlContainer.className = "counter-controls";
+
+        if (task.type === "counter") {
+          const minusBtn = document.createElement("button");
+          minusBtn.textContent = "−";
+          minusBtn.className = "count-btn";
+          minusBtn.addEventListener("click", () => {
+            if (task.count > 0) {
+              const wasZero = task.count === 0;
+              task.count--;
+              if (task.count === 0) stats.completedToday--;
+
+              if (!stats.history[getToday()]) stats.history[getToday()] = {};
+              stats.history[getToday()][task.text] = task.count;
+
+              saveData();
+              renderTasks();
+            }
+          });
+
+          const countDisplay = document.createElement("span");
+          countDisplay.textContent = task.count || 0;
+          countDisplay.className = "count-val";
+
+          const plusBtn = document.createElement("button");
+          plusBtn.textContent = "+";
+          plusBtn.className = "count-btn";
+          plusBtn.addEventListener("click", () => {
+            const wasZero = (task.count || 0) === 0;
+            task.count = (task.count || 0) + 1;
+            if (wasZero) stats.completedToday++;
+
+            if (!stats.history[getToday()]) stats.history[getToday()] = {};
+            stats.history[getToday()][task.text] = task.count;
+
+            saveData();
+            renderTasks();
+          });
+
+          controlContainer.appendChild(minusBtn);
+          controlContainer.appendChild(countDisplay);
+          controlContainer.appendChild(plusBtn);
+
+          if (task.count > 0) li.classList.add("completed");
+        } else {
+          const checkbox = document.createElement("input");
+          checkbox.type = "checkbox";
+          checkbox.checked = task.completed;
+          checkbox.addEventListener("change", () => {
+            task.completed = checkbox.checked;
+            if (checkbox.checked) {
+              stats.completedToday++;
+              stats.completedTotal++;
+              if (!stats.history[getToday()]) stats.history[getToday()] = {};
+              stats.history[getToday()][task.text] = true;
+            } else {
+              stats.completedToday--;
+              if (stats.history[getToday()]) stats.history[getToday()][task.text] = false;
+            }
+            saveData();
+            renderTasks();
+          });
+          li.prepend(checkbox);
+        }
 
         const deleteBtn = document.createElement("button");
         deleteBtn.textContent = "❌";
         deleteBtn.classList.add("deleteBtn");
 
         deleteBtn.addEventListener("click", () => {
-          if (task.completed) stats.completedToday--;
+          if (task.type === 'counter') {
+            if (task.count > 0) stats.completedToday--;
+          } else {
+            if (task.completed) stats.completedToday--;
+          }
           tasks.splice(index, 1);
           saveData();
           renderTasks();
         });
 
-        checkbox.addEventListener("change", () => {
-          task.completed = checkbox.checked;
-
-          if (checkbox.checked) {
-            stats.completedToday++;
-            stats.completedTotal++;
-
-            if (!stats.history[getToday()]) stats.history[getToday()] = {};
-            stats.history[getToday()][task.text] = true;
-          }
-
-          else {
-            stats.completedToday--;
-            if (stats.history[getToday()]) stats.history[getToday()][task.text] = false;
-          }
-
-          saveData();
-          renderTasks();
-        });
-
-        li.appendChild(checkbox);
         li.appendChild(span);
+        li.appendChild(controlContainer);
         li.appendChild(deleteBtn);
         taskList.appendChild(li);
 
@@ -591,9 +695,14 @@
       const taskText = taskInput.value.trim();
 
       if (taskText !== "") {
-        tasks.push({
-          text: taskText, completed: false
-        });
+        const type = taskType.value;
+        const newTask = { text: taskText, type: type };
+        if (type === 'counter') {
+          newTask.count = 0;
+        } else {
+          newTask.completed = false;
+        }
+        tasks.push(newTask);
         taskInput.value = "";
         testBtn.style.display = "none"; // Hide after adding
         saveData();
@@ -635,78 +744,152 @@
         return true;
       });
 
-      // Prepare Chart Data
-      const taskLabels = tasks.map(t => t.text);
-      const completionCounts = tasks.map(task => {
-        let count = 0;
-        days.forEach(day => {
-          if (stats.history[day] && stats.history[day][task.text]) count++;
-        });
-        return count;
-      });
+      // Filter tasks by type
+      const checkTasks = tasks.filter(t => t.type !== 'counter');
+      const counterTasks = tasks.filter(t => t.type === 'counter');
 
-      // Render/Update Chart
-      const chartCanvas = document.getElementById('statsChart');
-      const ctx = chartCanvas.getContext('2d');
-      if (statsChartInstance) statsChartInstance.destroy();
-
-      // Theme colors for Chart
       const isDark = theme === "dark";
       const mainTextColor = isDark ? '#ffffff' : '#000000';
       const secTextColor = '#8e8e93';
       const gridLineColor = isDark ? '#38383a' : '#e5e5ea';
 
-      // Dynamic height based on task count
-      const dynamicHeight = Math.max(250, tasks.length * 40 + 80);
-      chartCanvas.parentNode.style.height = `${dynamicHeight}px`;
+      // --- RENDER CHECK CHART ---
+      const checkChartContainer = document.getElementById('checkChartContainer');
+      if (checkTasks.length > 0) {
+        checkChartContainer.style.display = 'block';
+        const checkLabels = checkTasks.map(t => t.text);
+        const checkData = checkTasks.map(task => {
+          let count = 0;
+          days.forEach(day => {
+            if (stats.history[day] && stats.history[day][task.text]) count++;
+          });
+          return count;
+        });
 
-      statsChartInstance = new Chart(ctx, {
-        type: 'bar',
-        plugins: [ChartDataLabels],
-        data: {
-          labels: taskLabels,
-          datasets: [{
-            label: 'Completado',
-            data: completionCounts,
-            backgroundColor: '#0a84ff',
-            borderRadius: 6,
-            barThickness: 24
-          }]
-        },
-        options: {
-          indexAxis: 'y',
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: {
-            legend: { display: false },
-            title: {
-              display: true,
-              text: 'Total Acumulado',
-              color: mainTextColor,
-              font: { size: 16, weight: 'bold', family: 'Inter' },
-              padding: { bottom: 10 }
-            },
-            datalabels: {
-              color: '#ffffff', // Keep white for contrast on blue bars
-              anchor: 'center',
-              align: 'center',
-              font: { weight: 'bold', size: 12 },
-              formatter: (val) => val > 0 ? val : ''
-            }
+        const ctxCheck = document.getElementById('statsChartCheck').getContext('2d');
+        if (statsChartCheckInstance) statsChartCheckInstance.destroy();
+
+        const dynamicHeightCheck = Math.max(250, checkTasks.length * 40 + 80);
+        checkChartContainer.style.height = `${dynamicHeightCheck}px`;
+
+        statsChartCheckInstance = new Chart(ctxCheck, {
+          type: 'bar',
+          plugins: [ChartDataLabels],
+          data: {
+            labels: checkLabels,
+            datasets: [{
+              label: 'Días Completados',
+              data: checkData,
+              backgroundColor: '#0a84ff',
+              borderRadius: 6,
+              barThickness: 24
+            }]
           },
-          scales: {
-            x: {
-              beginAtZero: true,
-              grid: { display: false },
-              ticks: { color: secTextColor, stepSize: 1 }
+          options: {
+            indexAxis: 'y',
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: { display: false },
+              title: {
+                display: true,
+                text: 'Tareas Check: Días Completados',
+                color: mainTextColor,
+                font: { size: 16, weight: 'bold', family: 'Inter' },
+                padding: { bottom: 10 }
+              },
+              datalabels: {
+                color: '#ffffff',
+                anchor: 'center',
+                align: 'center',
+                font: { weight: 'bold', size: 12 },
+                formatter: (val) => val > 0 ? val : ''
+              }
             },
-            y: {
-              grid: { color: gridLineColor },
-              ticks: { color: mainTextColor }
+            scales: {
+              x: {
+                beginAtZero: true,
+                grid: { display: false },
+                ticks: { color: secTextColor, stepSize: 1 }
+              },
+              y: {
+                grid: { color: gridLineColor },
+                ticks: { color: mainTextColor }
+              }
             }
           }
-        }
-      });
+        });
+      } else {
+        checkChartContainer.style.display = 'none';
+      }
+
+      // --- RENDER COUNTER CHART ---
+      const counterChartContainer = document.getElementById('counterChartContainer');
+      if (counterTasks.length > 0) {
+        counterChartContainer.style.display = 'block';
+        const counterLabels = counterTasks.map(t => t.text);
+        const counterData = counterTasks.map(task => {
+          let totalCount = 0;
+          days.forEach(day => {
+            if (stats.history[day] && typeof stats.history[day][task.text] === 'number') {
+              totalCount += stats.history[day][task.text];
+            }
+          });
+          return totalCount;
+        });
+
+        const ctxCounter = document.getElementById('statsChartCounter').getContext('2d');
+        if (statsChartCounterInstance) statsChartCounterInstance.destroy();
+
+        // Fixed height for circular chart usually works better
+        counterChartContainer.style.height = '350px';
+
+        statsChartCounterInstance = new Chart(ctxCounter, {
+          type: 'pie',
+          plugins: [ChartDataLabels],
+          data: {
+            labels: counterLabels,
+            datasets: [{
+              data: counterData,
+              backgroundColor: [
+                '#ff3b30', '#ff9500', '#ffcc00', '#34c759', '#007aff', '#5856d6', '#af52de', '#ff2d55'
+              ],
+              borderWidth: 1,
+              borderColor: isDark ? '#1c1c1e' : '#ffffff'
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: {
+                display: true,
+                position: 'bottom',
+                labels: { color: mainTextColor, font: { family: 'Inter', size: 12 } }
+              },
+              title: {
+                display: true,
+                text: 'Tareas Contador: Totales Acumulados',
+                color: mainTextColor,
+                font: { size: 16, weight: 'bold', family: 'Inter' },
+                padding: { top: 10, bottom: 20 }
+              },
+              datalabels: {
+                color: '#ffffff',
+                font: { weight: 'bold', size: 14 },
+                formatter: (val, ctx) => {
+                  const label = ctx.chart.data.labels[ctx.dataIndex];
+                  return val > 0 ? `${val}` : '';
+                },
+                textShadowColor: 'rgba(0,0,0,0.5)',
+                textShadowBlur: 4
+              }
+            }
+          }
+        });
+      } else {
+        counterChartContainer.style.display = 'none';
+      }
 
       const headerRow = document.createElement("tr");
       const thTask = document.createElement("th");
@@ -731,7 +914,8 @@
 
           if (stats.history[day] && stats.history[day][task.text]) {
             td.classList.add("completed");
-            td.textContent = "✔";
+            const val = stats.history[day][task.text];
+            td.textContent = (typeof val === 'number') ? val : "✔";
           } else {
             td.classList.add("missed");
             td.textContent = "❌";
@@ -774,8 +958,13 @@
         }
 
         tasks.forEach(task => {
-          // Asigna completado aleatoriamente (50/50)
-          stats.history[dayStr][task.text] = Math.random() > 0.5;
+          if (task.type === 'counter') {
+            // Asigna un valor aleatorio entre 0 y 10 para contadores
+            stats.history[dayStr][task.text] = Math.floor(Math.random() * 11);
+          } else {
+            // Asigna completado aleatoriamente (50/50)
+            stats.history[dayStr][task.text] = Math.random() > 0.5;
+          }
         });
       }
 
@@ -861,8 +1050,12 @@
       tasks.forEach(task => {
         let row = `"${task.text}"`;
         days.forEach(day => {
-          const isComplete = stats.history[day] && stats.history[day][task.text];
-          row += "," + (isComplete ? "Completado" : "Pendiente");
+          const val = stats.history[day] ? stats.history[day][task.text] : null;
+          if (task.type === 'counter') {
+            row += "," + (val !== null ? val : 0);
+          } else {
+            row += "," + (val ? "Completado" : "Pendiente");
+          }
         });
         csvRaw += row + "\n";
       });
@@ -926,17 +1119,28 @@
 
           let taskName = parts[0].replace(/^"|"$/g, '').trim();
 
-          // Ensure task exists in current tasks list
-          if (!tasks.some(t => t.text === taskName)) {
-            tasks.push({ text: taskName, completed: false });
+          // Ensure task exists in current tasks list and infer type if missing
+          let existingTask = tasks.find(t => t.text === taskName);
+          if (!existingTask) {
+            // Check first occurrence of data to guess type
+            const firstVal = parts[1] ? parts[1].trim() : "";
+            const isNumeric = !isNaN(firstVal) && firstVal !== "Completado" && firstVal !== "Pendiente";
+            existingTask = { text: taskName, type: isNumeric ? 'counter' : 'check', completed: false };
+            tasks.push(existingTask);
           }
 
           dates.forEach((day, index) => {
-            const status = parts[index + 1];
-            if (!day || !status) return;
+            const status = parts[index + 1] ? parts[index + 1].trim() : "";
+            if (!day || status === "") return;
 
-            if (!stats.history[day.trim()]) stats.history[day.trim()] = {};
-            stats.history[day.trim()][taskName] = (status.trim() === "Completado");
+            const dayKey = day.trim();
+            if (!stats.history[dayKey]) stats.history[dayKey] = {};
+
+            if (existingTask.type === 'counter') {
+              stats.history[dayKey][taskName] = isNaN(status) ? 0 : Number(status);
+            } else {
+              stats.history[dayKey][taskName] = (status === "Completado");
+            }
           });
         });
 
